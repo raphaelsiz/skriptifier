@@ -1,0 +1,123 @@
+#created by Raphael Sizemore (ign "mergerg")
+#meant to completely replace permissions plugins AND/or SkPerms and SkQuery, but this is a lot more tedious to deal with than
+#permissions plugins, so only use it if you have to (eg Minehut restricting plugins).
+
+#NOTE: CURRENTLY THE /SETPERM COMMAND AND CHECKING OTHER COMMANDS FOR PERMISSIONS DOESN'T WORK! however, if your server is
+#entirely Skripted, this shouldn't be a problem as you or someone else from Skriptify (including me) could change the permissions
+#in that script to match this permission system!
+
+on load:
+   add "warp" to {default.perms::*}
+   add "sell" to {default.perms::*}
+   add "spawn" to {default.perms::*}
+   add "nick" to {default.perms::*}
+   add "nick.others" to {admin.perms::*}
+   add "kick" to {admin.perms::*}
+   add "mute" to {admin.perms::*}
+   add "set.spawn" to {admin.perms::*}
+   add "set.warp" to {admin.perms::*}
+#for prison ranks: (repeat with the rank name for each)
+   add "warp.A" to {A.perms::*}
+
+on join:
+   if {groups.%player%::parent} is not set:
+      set {groups.%player%::parent} to "default"
+      add player to {users.default::*}
+#for prison ranks:
+   if {groups.%player%::rank} is not set:
+      set {groups.%player%::rank} to "A"
+
+command /gadduser <text> <player> [<text>]:
+   permission: minecraft.op
+   usage: /gadduser <group> <player> [group-type]
+   trigger:
+      add arg 2 to {users.%arg 1%::*}
+      if arg 3 is set:
+         set {groups.%arg 2%::%arg 3%} to arg 1
+         message "%arg 2% has been placed in %arg 1% as their %arg 3% group!"
+      else:
+         add arg 1 to {groups.%arg 2%::*}
+         message "%arg 2% has been placed in %arg 1%!"
+
+command /gaddperm <text> <text>:
+   permission: minecraft.op
+   usage: /gaddperm <group> <permission>
+   trigger:
+      add arg 2 to {%arg 1%.perms::*}
+      message "Permission %arg 2% added to %arg 1%!"
+
+command /uaddperm <player> <text>:
+   permission: minecraft.op
+   usage: /uaddperm <player> <permission>
+   trigger:
+      add arg 2 to {%arg 1%.perms::*}
+      message "%arg 1% now has permission %arg 2%!"
+
+command /gdelperm <text> <text>:
+   permission: minecraft.op
+   usage: /gdelperm <group> <permission>
+   trigger:
+      if {%arg 1%.perms::*} contains arg 2:
+         remove arg 2 from {%arg 1%.perms::*}
+         message "Permission %arg 2% removed from %arg 1%!"
+      else:
+         message "%arg 1% doesn't have that permission!"
+
+command /udelperm <player> <text>:
+   permission: minecraft.op
+   usage: /udelperm <player> <permission>
+   trigger:
+      if {%arg 1%.perms::*} contains arg 2:
+         remove arg 2 from {%arg 1%.perms::*}
+         message "Permission %arg 2% removed from %arg 1%!"
+      else:
+         message "%arg 1% doesn't have that permission!"
+
+command /setperm <text> <text>:
+   permission: minecraft.op
+   usage: /setperm <command(no slash!)> <permission>
+   trigger:
+      add arg 1 to {permcommands::*}
+      set {permfor.%arg 1%} to arg 2
+      message "/%arg 1% now requires %arg 2%!"
+
+# Checks perms for already set commands!
+# You can delete this section if you only want custom commands, or if you don't want to be able to set perms ingame with /setperm (then obviously delete that too!)
+
+on command:
+   if {permcommands::*} contains command:
+      loop {groups.%player%::*}:
+         if {%loop-value%.perms::*} does not contain {permfor.%command%}:
+            message "Sorry, you don't have permission to do that!"
+
+
+command /setwarp <text>:
+   trigger:
+      loop {groups.%player%::*}:
+         if {%loop-value%.perms::*} contains "set.warp":
+            set {warp.%arg 1%} to player's location
+            message "Warp %arg 1% set!"
+         else if {%player%.perms::*} contains "set.warp":
+            set {warp.%arg 1%} to player's location
+            message "Warp %arg 1% set!"
+         else:
+            message "You don't have permission to set warps!"
+
+command /warp <text>:
+   trigger:
+      loop {groups.%player%::*}:
+         if {%loop-value%.perms::*} contains "warp.%arg 1%":
+            message "Warping to %arg 1%!"
+            teleport player to {warp.%arg 1%}
+            end loop
+         else:
+            message "You don't have permission to warp there!"
+      
+command /mine:
+   trigger:
+      loop {groups.%player%::*}:
+         if {%loop-value%.perms::*} contains "warp":
+            message "Warping to %{groups.%player%::rank}%!"
+            teleport player to {warp.%{groups.%player%::rank}%}
+         else:
+            message "You don't have permission to warp!"
